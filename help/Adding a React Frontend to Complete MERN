@@ -1,0 +1,406 @@
+Defining the skeleton application frontend
+
+- Home page: A view that renders at the root URL to welcome users to the web application.
+
+- Sign-up page: A view with a form for user sign-up, allowing new users to create a user account and redirecting them to a sign-in page when successfully created.
+
+- Sign-in page: A view with a sign-in form that allows existing users to sign in so they have access to protected views and actions.
+
+- User list page: A view that fetches and shows a list of all the users in the database, and also links to individual user profiles.
+
+- Profile page: A component that fetches and displays an individual user's information. This is only accessible by signed-in users and also contains edit and delete options, which are only visible if the signed-in user is looking at their own profile.
+
+- Edit profile page: A form that fetches the user's information to prefill the form fields. This allows the user to edit the information and this form is accessible only if the logged-in user is trying to edit their own profile. 
+
+- Delete user component: An option that allows the signed-in user to delete their own profile after confirming their intent.
+
+- Menu navigation bar: A component that lists all the available and relevant views to the user, and also helps to indicate the user's current location in the application.
+
+----------------------------------
+Setting up for React development
+
+- Before we can start developing with React in our existing skeleton codebase, we need to add configuration to compile and bundle the frontend code, add the React-related dependencies that are necessary to build the interactive interface, and tie this all together in the MERN development flow.
+
+- To achieve this, we will add frontend configuration for Babel, Webpack, and React Hot Loader to compile, bundle, and hot reload the code. Next, we will modify the server code to initiate code bundling for both the frontend and backend in one command to make the development flow simple. Then, we will update the code further so that it serves the bundled code from the server when the application runs in the browser. Finally, we will finish setting up by installing the React dependencies that are necessary to start implementing the frontend.
+
+---------------------------------
+Configuring Babel and Webpack
+
+- It is necessary to compile and bundle the React code that we will write to implement the frontend before the code can run in browsers. To compile and bundle the client code so that we can run it during development and also bundle it for production, we will update the configuration for Babel and Webpack. Then, we will configure the Express app to initiate frontend and backend code bundling in one command, so that just starting the server during development gets the complete stack ready for running and testing.
+
+------------
+Babel   
+
+- To compile React, first, install the Babel React preset module as a development dependency by running the following command from the command line:
+    yarn add --dev @babel/preset-react
+
+- Then, update .babelrc with the following code. This will include the module and also configure the react-hot-loader Babel plugin as required for the react-hot-loader module
+    {
+        "presets": [
+            ["@babel/preset-env",
+                {
+                    "targets": {
+                        "node": "current"
+                    }
+                }
+            ],
+            "@babel/preset-react"
+        ],
+        
+        "plugins": [
+            "react-hot-loader/babel"
+        ]
+    }
+
+---------
+Webpack
+
+- To bundle client-side code after compiling it with Babel, and also to enable react- hot-loader for faster development, install the following modules by running these commands from the command line:
+
+        yarn add -dev webpack-dev-middleware webpack-hot-middleware file-loader
+        yarn add react-hot-loader @hot-loader/react-dom
+
+- Then, to configure Webpack for frontend development and to build the production bundle, we will add a webpack.config.client.js file and a webpack.config.client.production.js file with the same configuration code we described in Chapter 2 , Preparing the Development Environment
+
+-----------
+Loading Webpack middleware for development
+
+- During development, when we run the server, the Express app should also load the Webpack middleware that's relevant to the frontend with respect to the configuration that's been set for the client-side code, so that the frontend and backend development workflow is integrated. To enable this, we will use the devBundle.js file we discussed in Chapter 2 , Preparing the Development Environment, in order to set up a compile method that takes the Express app and configures it to use the Webpack middleware. The devBundle.js file in the server folder will look as follows.
+- mern-project/server/devBundle.js :
+
+    import config from './../config/config'
+    import webpack from 'webpack'
+    import webpackMiddleware from 'webpack-dev-middleware'
+    import webpackHotMiddleware from 'webpack-hot-middleware'
+    import webpackConfig from './../webpack.config.client.js'
+
+    const compile = (app) => {
+      if(config.env === "development"){
+        const compiler = webpack(webpackConfig)
+        const middleware = webpackMiddleware(compiler, {
+          publicPath: webpackConfig.output.publicPath
+        })
+        app.use(middleware)
+        app.use(webpackHotMiddleware(compiler))
+      }
+    }
+
+    export default {
+      compile
+    }
+
+- In this method, the Webpack middleware uses the values set in webpack.config.client.js , and we enable hot reloading from the server-side using Webpack Hot Middleware.
+
+- Finally, we need to import and call this compile method in express.js by adding the following highlighted lines, but only during development.
+
+- mern-project/server/express.js :
+
+    import devBundle from './devBundle'
+    const app = express()
+    devBundle.compile(app)
+
+- These two highlighted lines are only meant for development mode and should be commented out when building the code for production. When the Express app runs in development mode, adding this code will import the middleware, along with the client-side Webpack configuration. Then, it will initiate Webpack to compile and bundle the client-side code and also enable hot reloading.
+
+- The bundled code will be placed in the dist folder. This code will be needed to render the views. Next, we will configure the Express server app so that it serves the static files from this dist folder. This will ensure that the bundled React code can be loaded in the browser
+
+---------------------
+Loading bundled frontend code
+
+- The frontend views that we will see rendered in the browser will load from the bundled files in the dist folder. For it to be possible to add these bundled files to the HTML view containing our frontend, we need to configure the Express app so that it serves static files, which are files that aren't generated dynamically by server-side code.
+
+-------------------------
+Serving static files with Express
+
+- To ensure that the Express server properly handles the requests to static files such as CSS files, images, or the bundled client-side JS, we will configure it so that it serves static files from the dist folder by adding the following configuration in express.js .
+- mern-project/server/express.js : 
+
+    import path from 'path'
+    const CURRENT_WORKING_DIR = process.cwd()
+    app.use('/dist', express.static(path.join(CURRENT_WORKING_DIR, 'dist')))
+
+--------------------------------
+Updating the template to load a bundled script
+
+- To add the bundled frontend code in the HTML to render our React frontend, we will update the template.js file so that it adds the script file from the dist folder to the end of the <body> tag.
+- mern-project/template.js :
+
+    <body>
+        <div id="root"></div>
+        <script type="text/javascript" src="/dist/bundle.js"></script>
+    </body>
+
+- This script tag will load our React frontend code in the browser when we visit the root URL '/' with the server running. We are ready to see this in action and can start installing the dependencies that will add the React views.
+
+--------------------------
+Adding React dependencies
+
+- The frontend views in our skeleton application will primarily be implemented using React. In addition, to enable client-side routing, we will use React Router, and to enhance the user experience with a sleek look and feel, we will use Material-UI. To add these libraries, we will install the following modules in this section:
+    + Core React modules: react and react-dom
+    + React Router modules: react-router and react-router-dom
+    + Material-UI modules: @material-ui/core and @material-ui/icons
+
+------------
+React
+
+- Throughout this book, we will use React to code up the frontend. To start writing the React component code, we will need to install the following modules as regular dependencies:
+
+    yarn add react react-dom
+
+- These are the core React library modules that are necessary for implementing the React-based web frontend. With other additional modules, we will add more functionality on top of React.
+
+
+
+---------
+React Router
+
+- React Router provides a collection of navigational components that enable routing on the frontend for React applications. We will add the following React Router modules:
+
+    yarn add react-router react-router-dom
+
+- These modules will let us utilize declarative routing and have bookmarkable URL routes in the frontend.
+
+-----------------
+Material-UI
+- In order to keep the UI in our MERN applications sleek without delving too much into UI design and implementation, we will utilize the Material-UI library. It provides ready to use and customizable React components that implement Google's material design. To start using Material-UI components to make the frontend, we need to install the following modules:
+
+    yarn add @material-ui/core @material-ui/icons
+
+- To add the Roboto fonts that are recommended by Material-UI and to use the Material-UI icons, we will add the relevant style links into the template.js file, in the HTML document's <head> section:
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+- With the development configuration all set up and the necessary React modules added to the code base, we can now implement the custom React components, starting with a home page. This should load up as the first view of the complete application.
+
+--------------------
+Rendering a home page view
+
+- To demonstrate how to implement a functional frontend for this MERN skeleton, we will start by detailing how to render a simple home page at the root route of the application, before covering backend API integration, user auth integration, and implementing the other view components in the rest of this chapter. 
+
+- The process of implementing and rendering a working Home component at the root route will also expose the basic structure of the frontend code in the skeleton. We will start with the top-level entry component that houses the whole React app and renders the main router component, which links all the React components in the application.
+
+- In the following sections, we will begin implementing the React frontend. First, we will add the root React component, which is integrated with React Router and Material-UI and configured for hot reloading. We will also learn how to customize the Material-UI theme and make the theme available to all our components. Finally, we will implement and load the React component representing the home page, in turn demonstrating how to add and render React views in this application.
+
+----------------
+Entry point at main.js
+
+- The client/main.js file in the client folder will be the entry point to render the complete React app, as already indicated in the client-side Webpack configuration object. In client/main.js , we import the root or top-level React component that will contain the whole frontend and render it to the div element with the 'root' ID specified in the HTML document in template.js .
+
+- mern-project/client/main.js :
+
+    import React from 'react'
+    import { render } from 'react-dom'
+    import App from './App'
+
+    render(<App/>, document.getElementById('root'))
+
+- Here, the top-level root React component is the App component and it is being rendered in the HTML. The App component is defined in client/App.js , as discussed in the next subsection.
+
+-----------------------
+Root React component
+
+- The top-level React component that will contain all the components for the application's frontend is defined in the client/App.js file. In this file, we configure the React app so that it renders the view components with a customized Material-UI theme, enables frontend routing, and ensures that the React Hot Loader can instantly load changes as we develop the components.
+
+- In the following sections, we will add code to customize the theme, make this theme and React Router capabilities available to our React components, and configure the root component for hot reloading.
+
+----------------------------
+Customizing the Material-UI theme
+
+- The Material-UI theme can be easily customized using the ThemeProvider component. It can also be used to configure the custom values of theme variables in createMuiTheme() . We will define a custom theme for the skeleton application in client/theme.js using createMuiTheme , and then export it so that it can be used in the App component.
+
+- mern-project/client/theme.js :
+
+    import { createMuiTheme } from '@material-ui/core/styles'
+    import { pink } from '@material-ui/core/colors'
+
+    const theme = createMuiTheme({
+        typography: {
+            useNextVariants: true,
+        },
+        palette: {
+            primary: {
+            light: '#5c67a3',
+            main: '#3f4771',
+            dark: '#2e355b',
+            contrastText: '#fff',
+        },
+        secondary: {
+            light: '#ff79b0',
+            main: '#ff4081',
+            dark: '#c60055',
+            contrastText: '#000',
+        },
+            openTitle: '#3f4771',
+            protectedTitle: pink['400'],
+            type: 'light'
+        }
+    })
+
+    export default theme
+
+- For the skeleton, we only apply minimal customization by setting some color values to be used in the UI. The theme variables that are generated here will be passed to, and available in, all the components we build
+
+---------------------
+Wrapping the root component with ThemeProvider and BrowserRouter
+
+- The custom React components that we will create to make up the user interface will be accessed with the frontend routes specified in the MainRouter component. Essentially, this component houses all the custom views that have been developed for the application and needs to be given the theme values and routing features. This component will be our core component in the root App component, which is defined in the following code.
+
+- mern-skeleton/client/App.js
+
+    import React from 'react'
+    import MainRouter from './MainRouter'
+    import {BrowserRouter} from 'react-router-dom'
+    import { ThemeProvider } from '@material-ui/styles'
+    import theme from './theme'
+
+    const App = () => {
+        return (
+            <BrowserRouter>
+                <ThemeProvider theme={theme}>
+                    <MainRouter/>
+                </ThemeProvider>
+            </BrowserRouter>
+    )}
+
+- When defining this root component in App.js , we wrap the MainRouter component with ThemeProvider , which gives it access to the Material-UI theme, and BrowserRouter , which enables frontend routing with React Router. The custom theme variables we defined previously are passed as a prop to ThemeProvider , making the theme available in all our custom React components. Finally, in the App.js file, we need to export this App component so that it can be imported and used in main.js .
+
+-----------------------
+Marking the root component as hot-exported
+- The last line of code in App.js , which exports the App component, uses the higher-order component (HOC) hot module from react-hot-loader to mark the root component as hot
+
+- mern-skeleton/client/App.js :
+
+    import { hot } from 'react-hot-loader'
+    const App = () => { ... }
+    export default hot(module)(App)
+
+- Marking the App component as hot in this way essentially enables live reloading of our React components during development.
+
+- For our MERN applications, we won't have to change the main.js and App.js code all that much after this point, and we can continue building out the rest of the React app by injecting new components into the MainRouter component, which is what we'll do in the next section.
+
+---------------------------
+Adding a home route to MainRouter
+
+- The MainRouter.js code will help render our custom React components with respect to the routes or locations in the application. In this first version, we will only add the root route for rendering the Home component.
+- mern-project/client/MainRouter.js :
+
+    import React from 'react'
+    import {Route, Switch} from 'react-router-dom'
+    import Home from './core/Home'
+
+    const MainRouter = () => {
+        return ( 
+            <div>
+                <Switch>
+                    <Route exact path="/" component={Home}/>
+                </Switch>
+            </div>
+        )
+    }
+    export default MainRouter
+
+- As we develop more view components, we will update the MainRouter and add routes for the new components inside the Switch component.
+
+- The Switch component in React Router renders a route exclusively. In other words, it only renders the first child that matches the requested route path. On the other hand, without being nested in a Switch , every Route component renders inclusively when there is a path match; for example, a request at '/' also matches a route at '/contact' .
+
+- The Home component, which we added this route for in MainRouter , needs to be defined and exported, which we'll do in the next section.
+
+---------------------------
+The Home component
+
+---------------------------
+Imports
+- For each React component implementation, we need to import the libraries, modules, and files being used in the implementation code. The component file will start with imports from React, Material-UI, React Router modules, images, CSS, API fetch, and the auth helpers from our code, as required by the specific component. For example, for the Home component code in Home.js , we use the following imports.
+
+mern-project/client/core/Home.js :
+
+    import React from 'react'
+    import { makeStyles } from '@material-ui/core/styles'
+    import Card from '@material-ui/core/Card'
+    import CardContent from '@material-ui/core/CardContent'
+    import CardMedia from '@material-ui/core/CardMedia'
+    import Typography from '@material-ui/core/Typography'
+    import unicornbikeImg from './../assets/images/unicornbike.jpg'
+
+- The image file is kept in the client/assets/images/ folder and is imported so that it can be added to the Home component. These imports will help us build the component and also define the styles to be used in the component.
+
+-----------------------
+Style declarations
+
+- After the imports, we will define the CSS styles that are required to style the elements in the component by utilizing the Material-UI theme variables and makeStyles , which is a custom React hook API provided by Material-UI .
+
+Note: Định nghĩa Hook: Hooks are new to React. Hooks are functions that make it possible to use React state and life cycle features in function components, without having to write a class to define the component. React provides some built-in hooks, but we can also build custom hooks as needed to reuse stateful behavior across different components. To learn more about React Hooks, visit reactjs.org/docs/hooks- intro.html .
+
+mern-project/client/core/Home.js
+
+    const useStyles = makeStyles(theme => ({
+        card: {
+            maxWidth: 600,
+            margin: 'auto',
+            marginTop: theme.spacing(5)
+        },
+        title: {
+            padding:`${theme.spacing(3)}px ${theme.spacing(2.5)}px
+            ${theme.spacing(2)}px`,
+            color: theme.palette.openTitle
+        },
+        media: {
+            minHeight: 400
+        }
+    }))
+
+- The JSS style objects defined here will be injected into the component using the hook returned by makeStyles . The makeStyles hook API takes a function as an argument and gives access to our custom theme variables, which we can use when defining the styles.
+
+Note JSS: Material-UI uses JSS, which is a CSS-in-JS styling solution for adding styles to components. JSS uses JavaScript as a language to describe styles. This book will not cover CSS and styling implementations in detail. It will mostly rely on the default look and feel of Material-UI components. To learn more about JSS, visit http://cssinjs.​org/​? v=​v9.​8.​1. For examples of how to customize the Material-UI component styles, check out the Material-UI documentation at https:/​/material-​ui.​com.
+
+---------------------
+Component definition
+
+- While writing the function to define the component, we will compose the content and behavior of the component. The Home component will contain a Material-UI Card with a headline, an image, and a caption, all styled with the styles we defined previously and returned by calling the useStyles() hook.
+
+mern-project/client/core/Home.js
+
+    export default function Home(){
+        const classes = useStyles()
+            return (
+                <Card className={classes.card}>
+                    <Typography variant="h6" className={classes.title}>
+                        Home Page
+                    </Typography>
+                    <CardMedia className={classes.media}
+                        image={unicornbikeImg} title="Unicorn Bicycle"/>
+                    <CardContent>
+                        <Typography variant="body2" component="p">
+                            Welcome to the MERN Skeleton home page.
+                        </Typography>
+                    </CardContent>
+                </Card>
+            )
+    }
+
+
+Note: Throughout this book, we will define all our React components as functional components. We will utilize React Hooks, which is a new addition to React, to add state and life cycle features, instead of using class definitions to achieve the same. The other view components to be implemented in our MERN applications will adhere to the same structure. In the rest of this book, we will focus mainly on the component definition, highlighting the unique aspects of the implemented component.
+
+- We are almost ready to run this code to render the home page component in the frontend. But before that, we need to update the Webpack configurations so that we can bundle and display images.
+
+--------------------
+Bundling image assets
+
+- The static image file that we imported into the Home component view must also be included in the bundle with the rest of the compiled JS code so that the code can access and load it. To enable this, we need to update the Webpack configuration files and add a module rule to load, bundle, and emit image files to the dist output directory, which contains the compiled frontend and backend code.
+
+        yarn add --dev file-loader
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

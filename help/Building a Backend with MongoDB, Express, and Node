@@ -1,0 +1,780 @@
+Babel
+mern-skeleton/.babelrc :
+    {
+        "presets": [
+            ["@babel/preset-env",
+                {
+                    "targets": {
+                        "node": "current"
+                    }
+                 }
+             ]
+         ]
+    }
+    - Install: yarn add --dev @babel/core babel-loader @babel/preset-env
+    -> Once the module installations are done, you will notice that the devDependencies
+list has been updated in the package.json file.
+
+Webpack
+    - Install: yarn add --dev webpack webpack-cli webpack-node-externals
+    - This will install the Webpack modules and update the package.json file.
+
+Config variables:
+    
+     const config = {
+        env: process.env.NODE_ENV || 'development',
+        port: process.env.PORT || 3000,
+        jwtSecret: process.env.JWT_SECRET || "YOUR_secret_key",
+        mongoUri: process.env.MONGODB_URI ||
+            process.env.MONGO_HOST ||
+            'mongodb://' + (process.env.IP || 'localhost') + ':' +
+            (process.env.MONGO_PORT || '27017') +
+            '/mernproject'
+     }
+     export default config
+
+ - Trong đó:
+     + env : To differentiate between development and production modes
+     + port : To define the listening port for the server
+     + jwtSecret : The secret key to be used to sign JWT
+     + mongoUri : The location of the MongoDB database instance for the project
+
+-----------------------
+Running scripts
+    mern-project/package.json:
+        
+        "scripts": {
+            "development": "nodemon"
+        }
+
+----------------------
+Configuring Express
+- To use Express, we will install it and then add and configure it in the
+server/express.js file.
+    code: yarn add express
+    file: mern-project/server/express.js:
+
+        import express from 'express'
+        const app = express()
+            /*... configure express ... */
+        export default app
+
+- To handle HTTP requests and serve responses properly, we will use the following
+modules to configure Express: 
+    * body-parser : Request body-parsing middleware to handle the complexities of parsing streamable request objects so that we can 
+    simplify browser-server communication by exchanging JSON in the request body.
+    --> Install module: yarn add body-parser
+    - Then, configure the Express app with bodyParser.json() and bodyParser.urlencoded({ extended:true }).
+
+    * cookie-parser : Cookie parsing middleware to parse and set cookies in request objects
+    --> Install the cookie-parser module: yarn add cookie-parser
+
+    * compression : Compression middleware that will attempt to compress response bodies for all requests that traverse through the middleware.
+    --> Install the compression module: yarn add compression    
+
+    * helmet : Collection of middleware functions to help secure Express apps by setting various HTTP headers.
+    --> Install the helmet: yarn add helmet
+    
+    * cors : Middleware to enable cross-origin resource sharing (CORS).
+    --> Install the cors module: yarn add cors
+
+- The updated mern-project/server/express.js code should be as follows:
+    import express from 'express'
+    import bodyParser from 'body-parser'
+    import cookieParser from 'cookie-parser'
+    import compress from 'compression'
+    import cors from 'cors'
+    import helmet from 'helmet'
+
+    const app = express()
+
+    app.use(bodyParser.json())
+    app.use(bodyParser.urlencoded({ extended: true }))
+    app.use(cookieParser())
+    app.use(compress())
+    app.use(helmet())
+    app.use(cors())
+
+    export default app
+
+----------------------
+Starting the server
+- With the Express app configured to accept HTTP requests, we can go ahead and use it to implement a server that can listen for incoming requests.
+- In the mern-project/server/server.js file, add the following code to implement the server:
+
+    import config from './../config/config'
+    import app from './express'
+
+    app.listen(config.port, (err) => {
+        if (err) {
+            console.log(err)
+        }
+        console.info('Server started on port %s.', config.port)
+    })
+
+Setting up Mongoose and connecting to MongoDB
+    - Install: yarn add mongoose
+    - Update the server.js file to import the mongoose module, configure it so that it uses native ES6 promises, and finally use it to handle the connection to the MongoDB database for the project.
+
+    import mongoose from 'mongoose'
+
+    mongoose.Promise = global.Promise
+    mongoose.connect(config.mongoUri, { useNewUrlParser: true,
+                                        useCreateIndex: true,
+                                        useUnifiedTopology: true } )
+    mongoose.connection.on('error', () => {
+        throw new Error(`unable to connect to database: ${mongoUri}`)
+    })
+
+NOTE: Mongoose is a MongoDB object modeling tool that provides a schema-based solution to model application data. It includes built-in type casting, validation, query building, and business logic hooks. Using Mongoose with this backend stack provides a higher layer over MongoDB with more functionality, including mapping object models to database documents. This makes it simpler and more productive to develop with a Node and MongoDB backend. To learn more about Mongoose, visit mongoosejscom.
+-------
+Mongo
+    code mongo:ps --no-headers -o comm 1
+    + systemd - select the systemd (systemctl) tab below. = sudo systemctl start mongod
+    + init - select the System V Init (service) tab below. = sudo service mongod start
+
+----------------------------------------
+Serving an HTML template at a root URL
+- With a Node- Express- and MongoDB- enabled server now running, we can extend it so that it serves an HTML template in response to an incoming request at the root URL / .
+- mern-project/template.js:
+
+    export default () => {
+        return `<!doctype html>
+            <html lang="en">
+                <head>
+                    <meta charset="utf-8">
+                    <title>MERN Skeleton</title>
+                </head>
+                <body>
+                    <div id="root"></div>
+                </body>
+            </html>`
+        }
+
+- To serve this template at the root URL, update the express.js file to import this template and send it in the response to a GET request for the '/' route.
+- mern-project/server/express.js:
+
+    import Template from './../template'
+    app.get('/', (req, res) => {
+        res.status(200).send(Template())
+    })
+
+- With this update, opening the root URL in a browser should show Hello World rendered on the page. If you are running the code on your local machine, the root URL will be http://localhost:3000/ .
+
+-----------------------------
+Implementing the user model
+- We will implement the user model in the server/models/user.model.js file and use Mongoose to define the schema with the necessary user data fields. We're doing this so that we can add built-in validation for the fields and incorporate business logic such as password encryption, authentication, and custom validation.
+- We will begin by importing the mongoose module and use it to generate a UserSchema , which will contain the schema definition and user-related business logic to make up the user model. This user model will be exported so that it can be used by the rest of the backend code.
+- mern-skeleton/server/models/user.model.js :
+
+    import mongoose from 'mongoose'
+    const UserSchema = new mongoose.Schema({ ... })
+    export default mongoose.model('User', UserSchema)
+
+note: The mongoose.Schema() function takes a schema definition object as a parameter to generate a new Mongoose schema object that will specify the properties or structure of each document in a collection. We will discuss this schema definition for the User collection before we add any business logic code to complete the user model.
+
+-----------------------------
+User schema definition
+- The user schema definition object that's needed to generate the new Mongoose schema will declare all user data fields and associated properties. The schema will record user-related information including name, email, created-at and last-updated-at timestamps, hashed passwords, and the associated unique password salt. We will elaborate on these properties next, showing you how each field is defined in the user schema code.
+
+Name
+- The name field is a required field of the String type.
+- mern-project/server/models/user.model.js :
+    name: {
+        type: String,
+        trim: true,
+        required: 'Name is required'
+    },
+- This field will store the user's name.
+
+Email
+- The email field is a required field of the String type.
+- mern-project/server/models/user.model.js :
+    email: {
+        type: String,
+        trim: true,
+        unique: 'Email already exists',
+        match: [/.+\@.+\..+/, 'Please fill a valid email address'],
+        required: 'Email is required'
+    },
+- The value to be stored in this email field must have a valid email format and must also be unique in the user collection.
+
+Created and updated timestamps
+- The created and updated fields are Date values.
+- mern-project/server/models/user.model.js :
+
+    created: {
+        type: Date,
+        default: Date.now
+    },
+    updated: Date,
+
+- These Date values will be programmatically generated to record timestamps that indicate when a user is created and user data is updated.
+
+Hashed password and salt
+- The hashed_password and salt fields represent the encrypted user password that we will use for authentication.
+- mern-project/server/models/user.model.js :
+
+    hashed_password: {
+        type: String,
+        required: "Password is required"
+    },
+    salt: String
+
+- The actual password string is not stored directly in the database for security purposes and is handled separately, as discussed in the next section.
+
+Handling the password string as a virtual field
+- The password string that's provided by the user is not stored directly in the user document. Instead, it is handled as a virtual field.
+- mern-project/server/models/user.model.js :
+
+    UserSchema
+        .virtual('password')
+        .set(function(password) {
+        this._password = password
+        this.salt = this.makeSalt()
+        this.hashed_password = this.encryptPassword(password)
+    })
+    .get(function() {
+        return this._password
+    })
+
+- When the password value is received on user creation or update, it is encrypted into a new hashed value and set to the hashed_password field, along with the unique salt value in the salt field.
+
+Encryption and authentication
+- The encryption logic and salt generation logic, which are used to generate the hashed_password and salt values representing the password value, are defined as UserSchema methods.
+- mern-project/server/models/user.model.js :
+
+    UserSchema.methods = {
+        authenticate: function(plainText) {
+            return this.encryptPassword(plainText) === this.hashed_password
+        },
+        encryptPassword: function(password) {
+            if (!password) return ''
+            try {
+                return crypto
+                    .createHmac('sha1', this.salt)
+                    .update(password)
+                    .digest('hex')
+            } catch (err) {
+                return ''
+            }
+        },
+        makeSalt: function() {
+            return Math.round((new Date().valueOf() * Math.random())) + ''
+        }
+    }
+
+- The UserSchema methods can be used to provide the following functionality:
+    + authenticate : This method is called to verify sign-in attempts by matching the user-provided password text with the hashed_password stored
+in the database for a specific user.
+    + encrypt Password : This method is used to generate an encrypted hash from the plain-text password and a unique salt value using the crypto 
+module from Node.( import crypto from 'crypto')
+    + makeSalt : This method generates a unique and random salt value using the current timestamp at execution and Math.random().
+
+- Note: The crypto module provides a range of cryptographic functionality, including some standard cryptographic hashing algorithms. In our code, we use the SHA1 hashing algorithm and createHmac from crypto to generate the cryptographic HMAC hash from the password text and salt pair.
+
+- Note: Hashing algorithms generate the same hash for the same input value. But to ensure two users don't end up with the same hashed password if they happen to use the same password text, we pair each password with a unique salt value before generating the hashed password for each user. This will also make it difficult to guess the hashing algorithm being used because the same user input is seemingly generating different hashes.
+
+- Note: These UserSchema methods are used to encrypt the user-provided password string into a hashed_password with a randomly generated salt value. The hashed_password and the salt are stored in the user document when the user details are saved to the database on a create or update. Both the hashed_password and salt values are required in order to match and authenticate a password string provided during user sign-in using the authenticate method. We should also ensure the user selects a strong password string to begin with, which can done by adding custom validation to the passport field.
+
+
+Password field validation
+- To add validation constraints to the actual password string that's selected by the end user, we need to add custom validation logic and associate it with the hashed_password field in the schema.
+- mern-project/server/models/user.model.js :
+
+    UserSchema.path('hashed_password').validate(function(v) {
+        if (this._password && this._password.length < 6) {
+            this.invalidate('password', 'Password must be at least 6 characters.')
+        }
+        if (this.isNew && !this._password) {
+            this.invalidate('password', 'Password is required')
+        }
+    }, null)
+
+- We will keep the password validation criteria simple in our application and ensure that a password value is provided and it has a length of at least six characters when a new user is created or an existing password is updated. We achieve this by adding custom validation to check the password value before Mongoose attempts to store the hashed_p
+
+=> The defined UserSchema , along with all the password-related business logic, completes the user model implementation. Now, we can import and use this user model in other parts of the backend code. But before we begin using this model to extend backend functionality, we will add a helper module so that we can parse readable Mongoose error messages, which are thrown against schema validations.
+
+------------------------------
+Mongoose error handling
+- The validation constraints that are added to the user schema fields will throw error messages if they're violated when user data is saved to the database. To handle these validation errors and other errors that the database may throw when we make queries to it, we will define a helper method that will return a relevant error message that can be propagated in the request-response cycle as appropriate.
+
+- We will add the getErrorMessage helper method to the server/helpers/dbErrorHandler.js file. This method will parse and return the error message associated with the specific validation error or other errors that can occur while querying MongoDB using Mongoose.
+- mern-project/server/helpers/dbErrorHandler.js :
+
+    const getErrorMessage = (err) => {
+        let message = ''
+        if (err.code) {
+            switch (err.code) {
+                case 11000:
+                case 11001:
+                    message = getUniqueErrorMessage(err)
+                    break   
+            default:
+                message = 'Something went wrong'
+        }
+        } else {
+            for (let errName in err.errors) {
+                if (err.errors[errName].message)
+                message = err.errors[errName].message
+            }
+        }
+        return message
+    }
+
+- Errors that are not thrown because of a Mongoose validator violation will contain an associated error code . In some cases, these errors need to be handled differently. For example, errors caused due to a violation of the unique constraint will return an error object that is different from Mongoose validation errors. The unique option is not a validator but a convenient helper for building MongoDB unique indexes, so we will add another getUniqueErrorMessage method to parse the unique constraint- related error object and construct an appropriate error message.
+- mern-project/server/helpers/dbErrorHandler.js :
+
+    const getUniqueErrorMessage = (err) => {
+        let output
+        try {
+            let fieldName =
+            err.message.substring(err.message.lastIndexOf('.$') + 2,
+            err.message.lastIndexOf('_1'))
+            output = fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ' already exists'
+        } catch (ex) {
+            output = 'Unique field already exists'
+        }
+        return output
+    }
+
+- By using the getErrorMessage function that's exported from this helper file, we can add meaningful error messages when handling errors that are thrown by Mongoose operations.
+
+- With the user model completed, we can perform Mongoose operations that are relevant to achieving user CRUD functionality with the User APIs we'll develop in the next section.
+
+------------------------------
+Adding user CRUD APIs
+
+- Our user API routes will be declared using the Express router in server/routes/user.routes.js , and then mounted on the Express app we configured in server/express.js
+- mern-PROJECT/server/express.js :
+
+    import userRoutes from './routes/user.routes'
+    ...
+    app.use('/', userRoutes)
+    ...
+
+----------------------
+User routes
+- The user routes that are defined in the user.routes.js file will use express.Router() to define route paths with the relevant HTTP methods and assign the corresponding controller function that should be called when these requests are received by the server.
+- We will keep the user routes simplistic by using the following:
+
+    * /api/users for the following:
+        Listing users with GET
+        Creating a new user with POST
+    * /api/users/:userId for the following:
+        Fetching a user with GET
+        Updating a user with PUT
+        Deleting a user with DELETE
+
+- The resulting user.routes.js code will look as follows
+
+    import express from 'express'
+    import userCtrl from '../controllers/user.controller'
+
+    const router = express.Router()
+
+    router.route('/api/users')
+        .get(userCtrl.list)
+        .post(userCtrl.create)
+
+    router.route('/api/users/:userId')
+        .get(userCtrl.read)
+        .put(userCtrl.update)
+        .delete(userCtrl.remove)
+
+    router.param('userId', userCtrl.userByID)
+
+    export default router
+
+- Besides declaring API endpoints that correspond to user CRUD operations, we'll also configure the Express router so that it handles the userId parameter in a requested route by executing the userByID controller function.
+- When the server receives requests at each of these defined routes, the corresponding controller functions are invoked. We will define the functionality for each of these controller methods and export it from the user.controller.js file in the next subsection
+
+--------------
+User controller
+- The server/controllers/user.controller.js file will contain definitions of the controller methods that were used in the preceding user route declarations as callbacks to be executed when a route request is received by the server.
+- The user.controller.js file will have the following structure:
+
+    import User from '../models/user.model'
+    import extend from 'lodash/extend'
+    import errorHandler from './error.controller'
+
+    const create = (req, res, next) => { }
+    const list = (req, res) => { }
+    const userByID = (req, res, next, id) => { }
+    const read = (req, res) => { }
+    const update = (req, res, next) => {  }
+    const remove = (req, res, next) => { }
+
+    export default { create, userByID, read, list, remove, update }
+
+- This controller will make use of the errorHandler helper to respond to route requests with meaningful messages when a Mongoose error occurs. It will also use a module called lodash when updating an existing user with changed values.
+
+Note: 'lodash' is a JavaScript library that provides utility functions for common programming tasks, including the manipulation of arrays and objects. To install lodash , run 'yarn add lodash' from the command line.
+
+- Each of the controller functions we defined previously is related to a route request, and will be elaborated on in relation to each API use case.
+
+-------------------- 
+Creating a new user
+- The API endpoint to create a new user is declared in the following route.
+- mern-project/server/routes/user.routes.js :
+
+    router.route('/api/users').post(userCtrl.create)
+
+- When the Express app gets a POST request at '/api/users' , it calls the create function we defined in the controller.
+
+    const create = (req, res, next) => { 
+        const user = new User(req.body)
+        try {
+            await user.save()
+            return res.status(200).json({
+                message: "Successfully signed up!"
+            })
+        } catch (err) {
+            return res.status(400).json({
+                error: errorHandler.getErrorMessage(err)
+            })
+        }
+    }
+
+- This function creates a new user with the user JSON object that's received in the POST request from the frontend within req.body . The call to user.save attempts to save the new user in the database after Mongoose has performed a validation check on the data. Consequently, an error or success response is returned to the requesting client.
+
+- The create function is defined as an asynchronous function with the async keyword, allowing us to use await with user.save() , which returns a Promise. Using the await keyword inside an async function causes this function to wait until the returned Promise resolves, before the next lines of code are executed. If the Promise rejects, an error is thrown and caught in the catch block.
+
+NOTE: Async/await is an addition to ES8 that allows us to write asynchronous JavaScript code in a seemingly sequential or synchronous manner. For controller functions that handle asynchronous behavior such as accessing the database, we will use the async/await syntax to implement them.
+- Similarly, in the next section, we will use async/await while implementing the
+controller function to list all users after querying the database.
+
+-------------------
+Listing all users
+- The API endpoint to fetch all the users is declared in the following route. 
+- mern-project/server/routes/user.routes.js :
+    
+    router.route('/api/users').get(userCtrl.list)
+
+- When the Express app gets a GET request at '/api/users' , it executes the list controller function.
+- mern-project/server/controllers/user.controller.js :
+
+    const list = async (req, res) => {
+        try {
+            let users = await User.find().select('name email updated created')
+            res.json(users)
+        } catch (err) {
+            return res.status(400).json({
+                error: errorHandler.getErrorMessage(err)
+            })
+        }
+    }
+
+- The list controller function finds all the users from the database, populates only the name , email , created , and updated fields in the resulting user list, and then returns this list of users as JSON objects in an array to the requesting client.
+
+- The remaining CRUD operations to read, update, and delete a single user require that we retrieve a specific user by ID first. In the next section, we will implement the controller functions that enable fetching a single user from the database to either return the user, update the user, or delete the user in response to the corresponding requests.
+
+----------------------------
+Loading a user by ID to read, update, or delete
+- All three API endpoints for read, update, and delete require a user to be loaded from the database based on the user ID of the user being accessed. We will program the Express router to do this action first before responding to a specific request to read, update, or delete.
+
+---------
+Loading
+- Whenever the Express app receives a request to a route that matches a path containing the :userId parameter in it, the app will execute the userByID controller function, which fetches and loads the user into the Express request object, before propagating it to the next function that's specific to the request that came in.
+- mern-skeleton/server/routes/user.routes.js :
+
+    router.param('userId', userCtrl.userByID)
+
+- The userByID controller function uses the value in the :userId parameter to query the database by _id and load the matching user's details.
+- mern-project/server/controllers/user.controller.js :
+
+    const userByID = async (req, res, next, id) => {
+        try {
+            let user = await User.findById(id)
+            if (!user)
+                return res.status('400').json({
+                    error: "User not found"
+                })
+            req.profile = user
+            next()
+        } catch (err) {
+            return res.status('400').json({
+                error: "Could not retrieve user"
+            })
+        }
+    }
+
+    
+- If a matching user is found in the database, the user object is appended to the request object in the profile key. Then, the next() middleware is used to propagate control to the next relevant controller function. For example, if the original request was to read a user profile, the next() call in userByID would go to the read controller function, which is discussed next.
+
+-----------
+Reading
+- The API endpoint to read a single user's data is declared in the following route.
+- mern-project/server/routes/user.routes.js :
+
+    router.route('/api/users/:userId').get(userCtrl.read)
+
+- When the Express app gets a GET request at '/api/users/:userId' , it executes the userByID controller function to load the user by the userId value, followed by the read controller function.
+- mern-skeleton/server/controllers/user.controller.js
+
+    const read = (req, res) => {
+        req.profile.hashed_password = undefined
+        req.profile.salt = undefined
+        return res.json(req.profile)
+    }
+
+- The read function retrieves the user details from req.profile and removes sensitive information, such as the hashed_password and salt values, before sending the user object in the response to the requesting client. This rule is also followed in implementing the controller function to update a user, as shown next.
+
+------------
+Updating
+- The API endpoint to update a single user is declared in the following route.
+- mern-project/server/routes/user.routes.js :
+    
+    router.route('/api/users/:userId').put(userCtrl.update)
+
+- When the Express app gets a PUT request at '/api/users/:userId' , similar to read , it loads the user with the :userId parameter value before executing the update controller function.
+
+- mern-project/server/controllers/user.controller.js :
+
+    const update = async (req, res) => {
+        try {
+            let user = req.profile
+            user = extend(user, req.body)
+            user.updated = Date.now()
+            await user.save()
+            user.hashed_password = undefined
+            user.salt = undefined
+            res.json(user)
+        } catch (err) {
+            return res.status(400).json({
+                error: errorHandler.getErrorMessage(err)
+            })
+        }
+    }
+
+- The update function retrieves the user details from req.profile and then uses the lodash module to extend and merge the changes that came in the request body to update the user data. Before saving this updated user to the database, the updated field is populated with the current date to reflect the last updated timestamp. Upon successfully saving this update, the updated user object is cleaned by removing sensitive data, such as hashed_password and salt , before sending the user object in the response to the requesting client. Implementation of the final user controller function to delete a user is similar to the update function, as detailed in the next section.
+--------
+Deleting
+- The API endpoint to delete a user is declared in the following route.
+- mern-project/server/routes/user.routes.js :
+    
+    router.route('/api/users/:userId').delete(userCtrl.remove)
+
+- When the Express app gets a DELETE request at '/api/users/:userId', similar to read and update, it loads the user by ID and then the remove controller function is executed.
+- mern-project/server/controllers/user.controller.js :
+
+    const remove = async (req, res) => {
+        try {
+            let user = req.profile
+            let deletedUser = await user.remove()
+            deletedUser.hashed_password = undefined
+            deletedUser.salt = undefined
+            res.json(deletedUser)
+        } catch (err) {
+            return res.status(400).json({
+                error: errorHandler.getErrorMessage(err)
+            })
+        }
+    }
+
+- The remove function retrieves the user from req.profile and uses the remove() query to delete the user from the database. On successful deletion, the requesting client is returned the deleted user object in the response.
+
+- With the implementation of the API endpoints so far, any client can perform CRUD operations on the user model. However, we want to restrict access to some of these operations with authentication and authorization. We'll look at this in the next section.
+
+
+--------------------------------
+Integrating user auth and protected routes
+
+- To restrict access to user operations such as user profile view, user update, and user delete, we will first implement sign-in authentication with JWT, then use it to protect and authorize the read, update, and delete routes.
+
+- The auth-related API endpoints for sign-in and sign-out will be declared in server/routes/auth.routes.js and then mounted on the Express app in server/express.js .
+
+- mern-skeleton/server/express.js :
+    import authRoutes from './routes/auth.routes'
+    ...
+    app.use('/', authRoutes)
+    ...
+
+- This will make the routes we define in auth.routes.js accessible from the client-side.
+
+-----------
+Auth routes
+- The two auth APIs are defined in the auth.routes.js file using express.Router() to declare the route paths with the relevant HTTP methods. They're also assigned the corresponding controller functions, which should be called when requests are received for these routes.
+
+- The auth routes are as follows:
+    * '/auth/signin' : POST request to authenticate the user with their email and password
+    * '/auth/signout' : GET request to clear the cookie containing a JWT that was set on the response object after sign-in
+
+- mern-project/server/routes/auth.routes.js 
+
+    import express from 'express'
+    import authCtrl from '../controllers/auth.controller'
+
+    const router = express.Router()
+
+    router.route('/auth/signin')
+        .post(authCtrl.signin)
+
+    router.route('/auth/signout')
+        .get(authCtrl.signout)
+        
+    export default router
+
+-A POST request to the signin route and a GET request to the signout route will invoke the corresponding controller functions defined in the auth.controller.js file, as discussed in the next section.
+
+----------------
+Auth controller
+- The auth controller functions in server/controllers/auth.controller.js will not only handle requests to the signin and signout routes, but also provide JWT and express-jwt functionality to enable authentication and authorization for protected user API endpoints.
+
+- mern-project/server/controllers/auth.controller.js
+
+    import User from '../models/user.model'
+    import jwt from 'jsonwebtoken'
+    import expressJwt from 'express-jwt'
+    import config from './../../config/config'
+
+    const signin = (req, res) => {  }
+    const signout = (req, res) => {  }
+    const requireSignin = ....
+    const hasAuthorization = (req, res) => {  }
+
+    export default { signin, signout, requireSignin, hasAuthorization }
+
+- The four controller functions are elaborated on in the following sections to show how the backend implements user auth using JSON Web Tokens. We'll start with the signin controller function in the next section.
+
+--------------
+Sign-in
+- mern-project/server/routes/auth.routes.js :
+    
+    router.route('/auth/signin').post(authCtrl.signin)
+
+- When the Express app gets a POST request at '/auth/signin' , it executes the signin controller function.
+- mern-project/server/controllers/auth.controller.js :
+
+    const signin = async (req, res) => {
+        try {
+            let user = await User.findOne({ "email": req.body.email })
+            if (!user)
+                return res.status('401').json({ error: "User not found" })
+
+            if (!user.authenticate(req.body.password)) {
+                return res.status('401').send({ error: "Email and password don't match." })
+            }
+                
+            const token = jwt.sign({ _id: user._id }, config.jwtSecret)
+
+            res.cookie('t', token, { expire: new Date() + 9999 })
+            
+            return res.json({
+                token,
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email
+                }
+            })
+        } catch (err) {
+            return res.status('401').json({ error: "Could not sign in" })
+        }
+    }
+
+- The POST request object receives the email and password in req.body . This email is used to retrieve a matching user from the database. Then, the password authentication method defined in UserSchema is used to verify the password that's received in req.body from the client.
+
+- If the password is successfully verified, the JWT module is used to generate a signed JWT using a secret key and the user's _id value.
+
+NOTE: Install the jsonwebtoken module to make it available to this controller in the import by running yarn add jsonwebtoken from the command line.
+
+- Then, the signed JWT is returned to the authenticated client, along with the user's details. Optionally, we can also set the token to a cookie in the response object so that it is available to the client-side if cookies are the chosen form of JWT storage. On the client-side, this token must be attached as an Authorization header when requesting protected routes from the server. To sign-out a user, the client-side can simply delete this token depending on how it is being stored. In the next section, we will learn how to use a signout API endpoint to clear the cookie containing the token.
+
+----------
+Signout
+- mern-project/server/routes/auth.routes.js :
+
+    router.route('/auth/signout').get(authCtrl.signout)
+
+- When the Express app gets a GET request at '/auth/signout', it executes the signout controller function.
+- mern-project/server/controllers/auth.controller.js :
+       const signout = (req, res) => {
+    res.clearCookie("t")
+    return res.status('200').json({
+        message: "signed out"
+    })
+}
+
+-The signout function clears the response cookie containing the signed JWT. 
+
+- With JWT, user state storage is the client's responsibility, and there are multiple options for client-side storage besides cookies. On signout, the client needs to delete the token on the client-side to establish that the user is no longer authenticated. On the server-side, we can use and verify the token that's generated at sign-in to protect routes that should not be accessed without valid authentication. In the next section, we will learn how to implement these protected routes using JWT.
+
+----------------------
+Protecting routes with express-jwt
+- To protect access to the read, update, and delete routes, the server will need to check that the requesting client is actually an authenticated and authorized user. 
+
+- To check whether the requesting user is signed in and has a valid JWT when a protected route is accessed, we will use the express-jwt module. 
+
+NOTE: The express-jwt module is a piece of middleware that validates JSON Web Tokens. Run yarn add express-jwt from the command line to install express-jwt .
+
+-----------------
+Protecting user routes
+- We will define two auth controller 
+- methods called requireSignin and hasAuthorization , both of which will be added to the user route declarations that need to be protected with authentication and authorization.
+
+- The read, update, and delete routes in user.routes.js need to be updated as follows.
+- mern-project/server/routes/user.routes.js :
+
+    import authCtrl from '../controllers/auth.controller'
+
+    router.route('/api/users/:userId')
+        .get(authCtrl.requireSignin, userCtrl.read)
+        .put(authCtrl.requireSignin, authCtrl.hasAuthorization, userCtrl.update)
+        .delete(authCtrl.requireSignin, authCtrl.hasAuthorization, userCtrl.remove)
+
+- The route to read a user's information only needs authentication verification, whereas the update and delete routes should check for both authentication and authorization before these CRUD operations are executed. We will look into the implementation of the requireSignin method, which checks authentication, and the hasAuthorization method, which checks authorization, in the next section.
+
+--------------------
+Requiring sign-in
+- The requireSignin method in auth.controller.js uses express-jwt to verify that the incoming request has a valid JWT in the Authorization header. If the token is valid, it appends the verified user's ID in an 'auth' key to the request object; otherwise, it throws an authentication error.
+
+- mern-project/server/controllers/auth.controller.js :
+
+    const requireSignin = expressJwt({
+        secret: config.jwtSecret,
+        userProperty: 'auth'
+    })
+
+- We can add requireSignin to any route that should be protected against unauthenticated access.
+
+------------------------------
+Authorizing signed in users
+For some of the protected routes, such as update and delete, on top of checking for authentication we also want to make sure the requesting user is only updating or deleting their own user information.
+
+To achieve this, the hasAuthorization function defined in auth.controller.js will check whether the authenticated user is the same as the user being updated or deleted before the corresponding CRUD controller function is allowed to proceed.
+
+mern-project/server/controllers/auth.controller.js :
+
+    const hasAuthorization = (req, res, next) => {
+        const authorized = req.profile && req.auth && req.profile._id == req.auth._id
+        if (!(authorized)) {
+            return res.status('403').json({
+                error: "User is not authorized"
+            })
+        }
+        next()
+    }
+
+- The req.auth object is populated by express-jwt in requireSignin after authentication verification, while req.profile is populated by the userByID function in user.controller.js . We will add the hasAuthorization function to routes that require both authentication and authorization.
+
+---------------------
+Auth error handling for express-jwt
+- To handle auth-related errors thrown by express-jwt when it tries to validate JWT tokens in incoming requests, we need to add the following error-catching code to the Express app configuration in mern-skeleton/server/express.js , near the end of the code, after the routes are mounted and before the app is exported:
+
+    app.use((err, req, res, next) => {
+        if (err.name === 'UnauthorizedError') {
+            res.status(401).json({"error" : err.name + ": " + err.message})
+        }else if (err) {
+            res.status(400).json({"error" : err.name + ": " + err.message})
+            console.log(err)
+        }
+    })
+
+- Auth error handling for express-jwt
+To handle auth-related errors thrown by express-jwt when it tries to validate JWT tokens in incoming requests, we need to add the following error-catching code to the Express app configuration in mern-skeleton/server/express.js , near the end of the code, after the routes are mounted and before the app is exported:
+
+- express-jwt throws an error named UnauthorizedError when a token cannot be validated for some reason. We catch this error here to return a 401 status back to the requesting client. We also add a esponse to be sent if other server-side errors are generated and caught here.
+
+- With user auth implemented for protecting routes, we have covered all the desired features of a working backend for our skeleton MERN application. In the next section, we will look at how we can check whether this standalone backend is functioning as desired without implementing a frontend.
+

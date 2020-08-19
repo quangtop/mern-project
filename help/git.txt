@@ -1,0 +1,190 @@
+*Quản lý sự thay đổi trong repo
++ Kiểm tra trạng thái
++ add một file mới vào git
++ chuyền file đấy sang trnagj thái staging
++ Kiểm tra status
++ Ignoring file: bỏ qua những file hay thư mục mà ta ko muốn checking
++ Xem thông tin các staged và unstaged
++ Commit file lên
++ Xóa file
++ Di chuyển file
+
+*Các lệnh git
+- git config --global user.name "Quang"
+- git config --global user.email "quangfalu@gmail.com"
+- git config --global core.editor " ' đường dẫn đến editor của bạn ' "
+- git config --list
+
+- git help <verb>
+- git <verb> --help
+- man git-<verb>
+-------------------------------------------------------------
+
+- đầu tiên khi một file được add và trong thư mục git chưa phải là một file được git quản lý, nó được goi là Untracked, 
+- sau đó dùng câu lệnh git add <tên file> nó sẽ chuyển sang trạng thái là staged( là trạng thái chuẩn bị để cho commit)
+- trạng thái thứ 2 là unmodifile(đang được theo dõi, nhưng không có sửa đổi gì cả) nghĩa là nó đã được add và chuyển sang staged, sau khi đã được commit thì nó chuyển về trnagj thái unmodifile(đang được theo dõi, nhưng không có sửa đổi gì cả), sau khi edit file thì nó chuyển sang trạng thái thứ 3
+- trạng thái thứ 3 là modifiled(là một trạng thái mà file đã được chỉnh sửa, nhưng chưa commit), sau đó nó lại được chuyển qua trạng thái staged(chuẩn bị commit) đây là một bản prepare, snapshort để commit nên một cái commit tiếp theo.
+
+- git init: khởi tạo repo
+- git add <ten file> add vào file để check nó
+- git add LICENSE
+- git add status or git add status --s
+- git diff : xem thông tin đang staged file nào
+- git diff --staged: 
+- git commit -m 'Init repository'
+- git commit -a -m "Add all file"
+- git log: kiểm tra git
+- git add --all : get tất cả vào git không cần phải git add <từng file>
+- git add * :giống với git add --a
+
+- git clone https://github.com/......
+
+- touch .gitignore : lệnh này để tạo file gitignore tác dụng của nó là để bỏ qua những file mà không cần sửa đổi(vd: file bin...)
+
+- git rm --cached README : --cached thì lưu được trên ổ cứng, không có nó thì không lưu dc
+- git rm log/\*.log : xóa vật lý file đó, nghĩ là xóa hăn file trong thư mục gốc vd: git rm bin\*.txt
+
+- git mv file-from file_to ( đổi từ file 1 sang file 2
+vd: git mv demo.txt curr.txt
+-------------------------------------------------------------------
+
+Để thoát màn hình git log bấm chữ Q
+View history commit: Xem lịch sử các commit
+* Git log
+- git log -p -2 : lấy ra 2 commit thôi
+- git log --stat : xem commit chi tiết hơn
+- git log --pretty=oneline: để change format of output
+- git log --since=2.weeks
+- git log --pretty="%h - %s --author=gitster --  since="2019-11-07"\: tìm những commit trong khoảng tg   nào, ngày nào... 
+- git log --pretty=format:"%h - %an, %ar : %s"
+   https://git-scm.com/docs/git-log
+   %(trailers[:options])
+-------------------------------------------------------------
+Unstage
+*Undoing Things: b1: tạo 2 file 
+- git commit -amend: giúp bổ sung thêm nội dung mà không cần chia là 2 commit, điều này giúp quản lý commit dễ dàng hơn
+
+* Unstaging a Staged File
+- git reset HEAD CONTRIBUTING.md
+git checkout -- forgottenfile.txt
+
+*Unmodifying a Modified File: Sử dụng cái này phải biết mình đang thực sự sửa cái gì
+- git checkout -- CONTRIBUTING.md
++ DÙng để trả về code như dạng ban đầu trước đó, ví dụ khi ta sửa code nhưng khi muốn cấu truc lại code (refactor) thì dùng checkout
+--------------------------------------------------------------
+
+*Work with Remote: nhằm trao đổi dữ liệu, hay kéo dự liệu về local để làm việc, sau khi làm việc thay đổi để push nên để share code, để đồng bộ
+
+b0: THực hiện các thao tác add, status, commit
+b1: Hiển thị các remote
+- git clone <https://github.com/supernovaslc/git.git>
+- cd git
+- git remote: xem thông tin remote
+- git remote -v: xem link url nào lưu chữ repo
+
+b2: Adding remote repo
+- git remote add <shortname> <url>: có 1 local rồi muốn liên kết với 1 remote để chia sẻ lệnh vs người khác
+
+b3: Fetch và Pull : lấy dữ liệu về
+- git fetch [remote-name] vd: git fetch origin: là một thao tác cập nhật những dữ liệu, thông tin mới nhất về repo
+- git pull : tự động fetch và merge dữ liệu từ máy khác về máy local
+- git pull origin
+
+b4: Pushing to your remotes
+- git push origin master    : đẩy dữ liệu lên sever(origin là tên remote, master là nhánh hay branch 
+
+b5: Inspecting a Remote
+- git remote show origin :show thông tin của origin (origin là tên remote)
+
+b6: Removing and renaming remotes
+- git remote rename <old-name> <new-name>
+- git remote rm tedugit
+---------------------------------------------------------------
+
+*Tagging: Đánh dấu, đặt tên một commit nào đó quan trọng
+Annotated Tags
+  - git tag -a v1.4 -m "my version 1.4"
+  - git tag  //vd: git tag -l "v1.8.5*"
+  - git show v1.4
+Lightweight Tags
+  - git tag v1.0-lw
+  - git tag
+Tagging later
+   - git log --pretty=oneline
+   - git tag a- v0.1
+Sharing Tags
+  - git push origin [tagname] //push tung cai mot
+  - git push origin --tags //push tat ca len
+Checking out Tags
+  - git checkout -b version1.0 v1.0
+  - git ls-remote --tag
+Delete Tags
+  - git tag -d {tag_name}: Xóa tag trên local
+  - git push {remote_name} --delete{tag_name}: Xóa tag trên server 
+---------------------------------------------------------------
+
+Alias: Viết câu lệnh nhanh và dễ dàng, giúp thu gọn mã lệnh
+- git config -global alias.co checkout
+- git config -global alias.br branch
+- git config -global alias.ci commit
+- git config -global alias.st status
+
+- git config --global alias.unstage 'reset HEAD --'
+   + git unstage fileA // Sau alias
+   + git reset HEAD --fileA //trước
+- git config --global alias.last 'log -1 HEAD' // lấy commit cuối cùng
+    + git last // Sau khi alias
+---------------------------------------------------------------
+Git không lưu trữ một tập hợp các giá trị thay đổi khác nahu, mà nó lưu trữ một tập snapshot, tức mỗi một lần commit thay đổi thì sẽ là một bản chụp, chụp lại chụp lại, khi backup vào commit git sẽ backup vào commnit ấy, chứa 1 con trỏ đến bản chụp, và nội dung bản chụp là 1 staged
+Git Branches : Nhánh git
+* Creating a new Branch
+- git branch <ten_nhanh>
+* HEAD pointing to a branch: đây là một con trỏ đặc biệt, muốn xem cái HEAD ở đâu thì dùng lệnh:
+- git log --oneline --decorate
+*Switching Branches: Chuyển sang một cái nhánh đã tồn tại được run bởi câu lệnh:
+- git checkout testing -> chuyển con trỏ HEAD sang nhánh testing
+-----------git có thể chuyển nhánh liên tục-----------------
+
+*Branching and Merging
+Kịch bản: đầu tiên làm việc trên 1 website, sau đó cần tạo một nhánh mới, làm một chức năng gì đấy ko muốn liên quan đến nhánh chính đang chạy, sau đó làm việc trong nhánh mới đó. Đang làm trong nhánh mới đấy thì nhận được một cuộc gọi đó là issue cần hotfix. Sau đó phải switch sang nhánh chính, và tạo một nhánh tên hotfix.
+- git checkout testing
+
+// để merge 2 nhánh vào với nhau
+- về nhánh: git checkout master
+- git merge <test_brach> //git merge issue97
+-> Sau khi merge nó sẽ tạo ra một commit mới
+
+*Merge Conflicts (khi có 2 file ở 2 nhánh kahcs nhau sửa cùng một chỗ file)
+tải: https://sourcegear.com/diffmerge/
+- git config --global metge.tool
+- git config --global metge.tool diffmerge
+- git mergetool -> diffmerge
+
+---------------------------------------------------------------------------
+
+ssh-keygen: tao key
+cat ~/.ssh/id_rsa.pub : khi tạo được key thì dán key đó vào gitlab
+cd ~/.ssh 
+~/.ssh$ ls
+~/.ssh$
+~/.ssh$ cd ~/
+
+
+
+
+
+---------------------------------------------------------------
+		Github
+** SSH Access
++ issues: danh sách các issues mà mình or người sử dụng log vào
++ Pull requests: Đóng góp vào project của chúng ta, con merge hay ko còn tùy vào chủ sở hữu
++ Wiki: mô tả dự án
++ Pulse: Quản lý pull request
++ Setting
+	+ Collaborators: thêm được tài khoản khác vào 	để làm cùng dự án
+	+ QUản lý ds Branches
+	+ Webhooks: là các external services bên ngoài 	giúp notified khi có sự thay đổi, tức là khi 	update một cái nó sẽ chuyển sang slack và mọi 	người đều biết
+
+*Contributing to a project: Đóng góp vào 1 dự án
+
+C:\Users\Admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Accessories\Notepad.lnk
