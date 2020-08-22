@@ -391,15 +391,401 @@ Bundling image assets
         yarn add --dev file-loader
 
 
+-----------------------------
+Integrating backend APIs
+- Users should be able to use the frontend views to fetch and modify user data in the database based on authentication and authorization. To implement these functionalities, the React components will access the API endpoints that are exposed by the backend using the Fetch API.
+
+Note: The Fetch API is a newer standard that makes network requests similar to XMLHttpRequest (XHR) but using promises instead, enabling a simpler and cleaner API. To learn more about the Fetch API, visit https://developer.mozilla.org/en-US/docs/Web/API/Fetch_​ API .
+
+Fetch for user CRUD
+
+---------------
+Creating a user
+
+- The create method will take user data from the view component, which is where we will invoke this method. Then, it will use fetch to make a POST call at the create API route, '/api/users' , to create a new user in the backend with the provided data.
+
+- mern-project/client/user/api-user.js :
+
+    const create = async (user) => {
+        try {
+            let response = await fetch('/api/users/', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(user)
+            })
+        return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- Finally, in this method, we return the response from the server as a promise. So, the component calling this method can use this promise to handle the response appropriately, depending on what is returned from the server. Similarly, we will implement the list method next.
+
+----------
+Listing users
+The list method will use fetch to make a GET call to retrieve all the users in the database, and then return the response from the server as a promise to the component.
+
+- mern-project/client/user/api-user.js :
+
+    const list = async (signal) => {
+        try {
+            let response = await fetch('/api/users/', {
+                method: 'GET',
+                signal: signal,
+            })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- The returned promise, if it resolves successfully, will give the component an array containing the user objects that were retrieved from the database. In the case of a single user read, we will deal with a single user object instead, as demonstrated next.
+
+----------------
+Reading a user profile
+
+-The read method will use fetch to make a GET call to retrieve a specific user by ID. Since this is a protected route, besides passing the user ID as a parameter, the requesting component must also provide valid credentials, which, in this case, will be a valid JWT received after a successful sign-in.
+
+- mern-project/client/user/api-user.js :
+
+    const read = async (params, credentials, signal) => {
+        try {
+            let response = await fetch('/api/users/' + params.userId, {
+                method: 'GET',
+                signal: signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + credentials.t
+                }
+            })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- The JWT is attached to the GET fetch call in the Authorization header using the Bearer scheme, and then the response from the server is returned to the component in a promise. This promise, when it resolves, will either give the component the user details for the specific user or notify that access is restricted to authenticated users. Similarly, the updated user API method also needs to be passed valid JWT credentials for the fetch call, as shown in the next section.
+
+-----------------------
+Updating a user's data
+
+- The update method will take changed user data from the view component for a specific user, then use fetch to make a PUT call to update the existing user in the backend. This is also a protected route that will require a valid JWT as the credential.
+
+- mern-project/client/user/api-user.js :
+
+    const update = async (params, credentials, user) => {
+        try {
+            let response = await fetch('/api/users/' + params.userId, {
+                method: 'PUT',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + credentials.t
+                },
+                body: JSON.stringify(user)
+            })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- As we have seen with the other fetch calls, this method will also return a promise containing the server's response to the user update request. In the final method, we will learn how to call the user delete API.
+
+---------------
+Deleting a user
+The remove method will allow the view component to delete a specific user from the database and use fetch to make a DELETE call. This, again, is a protected route that will require a valid JWT as a credential, similar to the read and update methods.
+
+- mern-project/client/user/api-user.js :
+
+    const remove = async (params, credentials) => {
+        try {
+            let response = await fetch('/api/users/' + params.userId, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + credentials.t
+                }
+            })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- The response from the server to the delete request will be returned to the component as a promise, as in the other methods.
+
+- In these five helper methods, we have covered calls to all the user CRUD-related API endpoints that we implemented on the backend. Finally, we can export these methods from the api-user.js file as follows.
+
+- mern-project/client/user/api-user.js :
+
+    export { create, list, read, update, remove }
+
+-These user CRUD methods can now be imported and used by the React components as required. Next, we will implement similar helper methods to integrate the auth- related API endpoints.
 
 
+----------------
+Fetch for the auth API
+
+- In order to integrate the auth API endpoints from the server with the frontend React components, we will add methods for fetching sign-in and sign-out API endpoints in the client/auth/api-auth.js file. Let's take a look at them.
+
+--------------------
+Sign-in
+
+- The signin method will take user sign-in data from the view component, then use fetch to make a POST call to verify the user with the backend.
+
+- mern-project/client/auth/api-auth.js :
+
+    const signin = async (user) => {
+        try {
+            let response = await fetch('/auth/signin/', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(user)
+            })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- The response from the server will be returned to the component in a promise, which may provide the JWT if sign-in was successful. The component invoking this method needs to handle the response appropriately, such as storing the received JWT locally so it can be used when making calls to other protected API routes from the frontend. We will look at the implementation for this when we implement the Sign In view later in this chapter.
+
+- After the user is successfully signed in, we also want the option to call the signout API when the user is signing out. The call to the signout API is discussed next.
+
+------------------
+Sign-out
+
+- We will add a signout method to api-auth.js , which will use fetch to make a GET call to the signout API endpoint on the server.
+
+- mern-project/client/auth/api-auth.js :
+
+    const signout = async () => {
+        try {
+            let response = await fetch('/auth/signout/', { method: 'GET' })
+            return await response.json()
+        } catch(err) {
+            console.log(err)
+        }
+    }
+
+- This method will also return a promise to inform the component about whether the API request was successful.
+
+- At the end of the api-auth.js file, we will export the signin and signout
+methods.
+    
+    export { signin, signout }
+
+- Now, these methods can be imported into the relevant React components so that we can implement the user sign-in and signout features. 
+
+- With these API fetch methods added, the React frontend has complete access to the endpoints we made available in the backend. Before we start putting these methods to use in our React components, we will look into how user auth state can be maintained across the frontend.
 
 
+----------------------
+Adding auth in the frontend
 
+- As we discussed in the previous chapter, implementing authentication with JWT relinquishes responsibility to the client-side to manage and store user auth state. To this end, we need to write code that will allow the client-side to store the JWT that's received from the server on successful sign-in, make it available when accessing protected routes, delete or invalidate the token when the user signs out, and also restrict access to views and components on the frontend based on the user auth state.
 
+- Using examples of the auth workflow from the "React Router documentation", in the following sections, we will write helper methods to manage the auth state across the components, and also use a custom PrivateRoute component to add protected routes to the frontend of the MERN skeleton application.
 
+-------------
+Managing auth state
 
+- To manage auth state in the frontend of the application, the frontend needs to be able to store, retrieve, and delete the auth credentials that are received from the server on successful user sign in. In our MERN applications, we will use the browser's sessionsStorage as the storage option to store the JWT auth credentials.
 
+- Alternatively, you can use localStorage instead of sessionStorage to store the JWT credentials. With sessionStorage , the user auth state will only be remembered in the current window tab. With localStorage , the user auth state will be remembered across tabs in a browser. 
+
+- In client/auth/auth-helper.js , we will define the helper methods discussed in the following sections to store and retrieve JWT credentials from client-side sessionStorage , and also clear out the sessionStorage on user sign-out.
+
+--------------
+Saving credentials
+
+- In order to save the JWT credentials that are received from the server on successful sign-in, we use the authenticate method, which is defined as follows.
+
+- mern-project/client/auth/auth-helper.js :
+
+    authenticate(jwt, cb); {
+        if(typeof window !== "undefined")
+            sessionStorage.setItem('jwt', JSON.stringify(jwt))
+        cb()
+    }
+
+- The authenticate method takes the JWT credentials, jwt , and a callback function, cb , as arguments. It stores the credentials in sessionStorage after ensuring window is defined, in other words ensuring this code is running in a browser and hence has access to sessionStorage . Then, it executes the callback function that is passed in. This callback will allow the component – in our case, the component where sign-in is called – to define actions that should take place after successfully signing in and storing credentials. Next, we will discuss the method that lets us access these stored credentials.
+
+----------------
+Retrieving credentials
+
+- In our frontend components, we will need to retrieve the stored credentials to check if the current user is signed in. In the isAuthenticated() method, we can retrieve these credentials from sessionStorage.
+
+- mern-project/client/auth/auth-helper.js :
+
+    isAuthenticated(); {
+        if (typeof window == "undefined")
+            return false
+
+        if (sessionStorage.getItem('jwt'))
+            return JSON.parse(sessionStorage.getItem('jwt'))
+        else
+            return false
+    }
+
+- A call to isAuthenticated() will return either the stored credentials or false , depending on whether credentials were found in sessionStorage . Finding credentials in storage will mean a user is signed in, whereas not finding credentials will mean the user is not signed in. We will also add a method that allows us to delete the credentials from storage when a signed-in user signs out from the application.
+
+----------------
+Deleting credentials
+
+- When a user successfully signs out from the application, we want to clear the stored JWT credentials from sessionStorage . This can be accomplished by calling the clearJWT method, which is defined in the following code.
+
+- mern-project/client/auth/auth-helper.js
+
+    clearJWT(cb); {
+        if(typeof window !== "undefined")
+            sessionStorage.removeItem('jwt')
+        cb()
+        signout().then((data) => {
+            document.cookie = "t=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+        })
+    }
+
+- This clearJWT method takes a callback function as an argument, and it removes the JWT credential from sessionStorage . The passed in cb() function allows the component initiating the signout functionality to dictate what should happen after a successful sign-out.
+
+- The clearJWT method also uses the signout method we defined earlier in api-auth.js to call the signout API in the backend. If we had used cookies to store the credentials instead of sessionStorage , the response to this API call would be where we clear the cookie, as shown in the preceding code. Using the signout API call is optional since this is dependent on whether cookies are used as the credential storage mechanism.
+
+- With these three methods, we now have ways of storing, retrieving, and deleting JWT credentials on the client-side. Using these methods, the React components we build for the frontend will be able to check and manage user auth state to restrict access in the frontend, as demonstrated in the following section with the custom PrivateRoute component.
+
+-----------------------
+The PrivateRoute component
+
+- The code in the file defines the PrivateRoute component, as shown in the auth flow example at https://reacttraining.com/react-router/web/example/auth-workflow , which can be found in the React Router documentation. It will allow us to declare protected routes for the frontend to restrict view access based on user auth.
+
+- mern-project/client/auth/PrivateRoute.js :
+
+    import React, { Component } from 'react'
+    import { Route, Redirect } from 'react-router-dom'
+    import auth from './auth-helper'
+
+    const PrivateRoute = ({ component: Component, ...rest }) => (
+        <Route {...rest} render={props => (
+            auth.isAuthenticated() ? (
+            <Component {...props}/>
+            ) : (
+                <Redirect to={{
+                        pathname: '/signin',
+                        state: { from: props.location }
+                }}/>
+            )
+        )}/>
+    )
+
+    export default PrivateRoute
+
+- Components to be rendered in this PrivateRoute will only load when the user is authenticated, which is determined by a call to the isAuthenticated method; otherwise, the user will be redirected to the Signin component. We load the components that should have restricted access, such as the user profile component, in a PrivateRoute . This will ensure that only authenticated users are able to view the user profile page.
+
+- With the backend APIs integrated and the auth management helper methods ready for use in the components, we can now start building the remaining view components that utilize these methods and complete the frontend.
+
+------------------
+Completing the User frontend
+
+- The React components that will be described in this section complete the interactive features we defined for the skeleton by allowing users to view, create, and modify user data stored in the database with respect to auth restrictions. The components we will implement are as follows:
+
+    * Users : To fetch and list all users from the database to the view
+    * Signup : To display a form that allows new users to sign up
+    * Signin : To display a form that allows existing users to sign in
+    * Profile : To display details for a specific user after retrieving from the database
+    * EditProfile : To display details for a specific user and allow authorized user to update these details
+    * DeleteUser : To allow an authorized user to delete their account from the application
+    * Menu : To add a common navigation bar to each view in the application 
+
+---------------------
+The Users component
+
+- The Users component in client/user/Users.js shows the names of all the users that have been fetched from the database and links each name to the user profile. The following component can be viewed by any visitor to the application and will render at the '/users' route:
+
+- mern-project/client/user/Users.js :
+
+    export default function Users() {
+        ....
+        const [users, setUsers] = useState([])
+        ....
+    }
+
+- In the component definition, similar to how we implemented the Home component, we define and export a function component. In this component, we start by initializing the state with an empty array of users.
+
+- We are using the built-in React hook, useState , to add state to this function component. By calling this hook, we are essentially declaring a state variable named users , which can be updated by invoking setUsers , and also set the initial value of users to [ ] .
+
+- Using the built-in useState hook allows us to add state behavior to a function component in React. Calling it will declare a state variable, similar to using this.state in class component definitions. The argument that's passed to useState is the initial value of this variable – in other words, the initial state. Invoking useState returns the current state and a function that updates the state value, which
+is similar to this.setState in a class definition.
+
+- With the users state initialized, next, we will use another built-in React hook named useEffect to fetch a list of users from the backend and update the users value in the state.
+
+**Note: The Effect Hook, useEffect , serves the purpose of the componentDidMount , componentDidUpdate , and componentWillUnmount React life cycle methods that we would otherwise use in React classes. Using this hook in a function component allows us to perform side effects such as fetching data from a backend. By default, React runs the effects defined with useEffect after every render, including the first render. But we can also instruct the effect to only rerun if something changes in state. Optionally, we can also define how to clean up after an effect, for example, to perform an action such as aborting a fetch signal when the component unmounts to avoid memory leaks.
+
+- In our Users component, we use useEffect to call the list method from the api-user.js helper methods. This will fetch the user list from the backend and load the user data into the component by updating the state.
+
+- mern-skeleton/client/user/Users.js
+
+    useEffect(() => {
+    
+        const abortController = new AbortController()
+        const signal = abortController.signal
+    
+        list(signal).then((data) => {
+            if (data && data.error) {
+                console.log(data.error)
+            } else {
+                setUsers(data)
+            }
+        })
+        return function cleanup(){
+            abortController.abort()
+        }
+    
+    }, [])
+
+- In this effect, we also add a cleanup function to abort the fetch call when the component unmounts. To associate a signal with the fetch call, we use the AbortController web API, which allows us to abort DOM requests as needed.
+
+- In the second argument of this useEffect hook, we pass an empty array so that this effect cleanup runs only once upon mounting and unmounting, and not after every render.
+
+- Finally, in the return of the Users function component, we add the actual view content. The view is composed of Material-UI components such as Paper , List , and ListItem . These elements are styled with the CSS that is defined and made available with the makeStyles hook, the same way as in the Home component.
+
+- mern-project/client/user/Users.js :
+
+    return (
+        <Paper className={classes.root} elevation={4}>
+            <Typography variant="h6" className={classes.title}>
+                All Users
+            </Typography>
+            <List dense>
+                {users.map((item, i) => {
+                    return <Link to={"/user/" + item._id} key={i}>
+                        <ListItem button>
+                            <ListItemAvatar>
+                                <Avatar>
+                                    <Person/>
+                                </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText primary={item.name}/>
+                            <ListItemSecondaryAction>
+                                <IconButton>
+                                    <ArrowForward/>
+                                </IconButton>
+                            </ListItemSecondaryAction>
+                        </ListItem>
+                    </Link>
+                })
+                }
+            </List>
+        </Paper>
+    )
 
 
 
