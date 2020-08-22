@@ -787,6 +787,21 @@ is similar to this.setState in a class definition.
         </Paper>
     )
 
+- In this view, to generate each list item, we iterate through the array of users in the state using the map function. A list item is rendered with an individual user's name from each item that's accessed per iteration on the users array.
 
+- To add this Users component to the React application, we need to update the MainRouter component with a Route that renders this component at the '/users' path. Add the Route inside the Switch component after the Home route.
+
+- mern-project/client/MainRouter.js :
+
+    <Route path="/users" component={Users}/>
+
+- To see this view rendered in the browser, you can temporarily add a Link component to the Home component to be able to route to the Users component:
+
+    <Link to="/users">Users</Link>
+
+---------------------
+The Signup component
+
+- The Signup component in client/user/Signup.js presents a form with name, email, and password fields to the user for sign-up at the '/signup' path.
 
 
